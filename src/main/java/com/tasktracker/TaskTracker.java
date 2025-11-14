@@ -1,12 +1,11 @@
 package com.tasktracker;
 
-import com.tasktracker.model.Task;
-import com.tasktracker.repository.TaskRepository;
-
-import java.time.LocalDateTime;
+import com.tasktracker.service.TaskService;
 
 public class TaskTracker {
     static void main(String[] args) {
+        var taskService = new TaskService();
+
         if (args.length == 0) {
             System.out.println("Usage:");
             System.out.println("    add <description> - Add a new task");
@@ -30,29 +29,11 @@ public class TaskTracker {
                 }
 
                 var description = args[1];
-                var taskRepository = new TaskRepository();
-                var tasks = taskRepository.load();
-
-                var newId = tasks.stream().mapToInt(t -> t.getId()).max().orElse(0) + 1;
-                System.out.println("Nuevo ID de tarea: " + newId);
-
-                var task = new Task(newId, description);
-
-                tasks.add(task);
-                taskRepository.save(tasks);
-
-                System.out.println("Task added: " + task);
+                taskService.addTask(description);
             }
 
             case "list" -> {
                 // Lógica para listar tareas
-                var taskRepository = new TaskRepository();
-                var tasks = taskRepository.load();
-
-                if (tasks.isEmpty()) {
-                    System.out.println("No tasks found.");
-                }
-
                 if (args.length > 1) {
                     var statusFilter = args[1];
 
@@ -61,14 +42,10 @@ public class TaskTracker {
                         return;
                     }
 
-                    var filteredTasks = tasks.stream()
-                            .filter(task -> task.getStatus().equals(statusFilter))
-                            .toList();
-
-                    tasks = filteredTasks;
+                    taskService.listTasks(statusFilter);
+                } else {
+                    taskService.listTasks(null);
                 }
-
-                tasks.forEach(task -> System.out.println(task.getId() + ": " + task.getDescription() + " [" + task.getStatus() + "]"));
             }
 
             case "update" -> {
@@ -89,20 +66,8 @@ public class TaskTracker {
                 }
 
                 var newDescription = args[2];
-                var taskRepository = new TaskRepository();
-                var tasks = taskRepository.load();
 
-                var taskToUpdate = tasks.stream().filter(task -> task.getId() == idToUpdate).findFirst();
-
-                if (taskToUpdate.isPresent()) {
-                    var task = taskToUpdate.get();
-                    task.setDescription(newDescription);
-                    task.setUpdatedAt(LocalDateTime.now());
-                    taskRepository.save(tasks);
-                    System.out.println("Task updated: " + task);
-                } else {
-                    System.out.println("Task with ID " + idToUpdate + " not found.");
-                }
+                taskService.updateTask(idToUpdate, newDescription);
             }
 
             case "mark-in-progress" -> {
@@ -122,20 +87,7 @@ public class TaskTracker {
                     return;
                 }
 
-                var taskRepository = new TaskRepository();
-                var tasks = taskRepository.load();
-
-                var taskToMark = tasks.stream().filter(task -> task.getId() == idToMark).findFirst();
-
-                if (taskToMark.isPresent()) {
-                    var task = taskToMark.get();
-                    task.setStatus("in-progress");
-                    task.setUpdatedAt(LocalDateTime.now());
-                    taskRepository.save(tasks);
-                    System.out.println("Task marked as in progress: " + task);
-                } else {
-                    System.out.println("Task with ID " + idToMark + " not found.");
-                }
+                taskService.markTaskInProgress(idToMark);
             }
 
             case "mark-done" -> {
@@ -155,20 +107,7 @@ public class TaskTracker {
                     return;
                 }
 
-                var taskRepository = new TaskRepository();
-                var tasks = taskRepository.load();
-
-                var taskToMark = tasks.stream().filter(task -> task.getId() == idToMark).findFirst();
-
-                if (taskToMark.isPresent()) {
-                    var task = taskToMark.get();
-                    task.setStatus("done");
-                    task.setUpdatedAt(LocalDateTime.now());
-                    taskRepository.save(tasks);
-                    System.out.println("Task marked as done: " + task);
-                } else {
-                    System.out.println("Task with ID " + idToMark + " not found.");
-                }
+                taskService.markTaskDone(idToMark);
             }
 
             case "delete" -> {
@@ -188,20 +127,10 @@ public class TaskTracker {
                     return;
                 }
 
-                var taskRepository = new TaskRepository();
-                var tasks = taskRepository.load();
-
-                var removed = tasks.removeIf(task -> task.getId() == idToDelete);
-
-                if (removed) {
-                    taskRepository.save(tasks);
-                    System.out.println("Task with ID " + idToDelete + " deleted.");
-                } else {
-                    System.out.println("Task with ID " + idToDelete + " not found.");
-                }
+                taskService.deleteTask(idToDelete);
             }
 
-            default -> System.out.println("Comando no reconocido: " + command);
+            default -> System.out.println("Unknown command: " + command);
         }
     }
 }
